@@ -55,6 +55,18 @@ if not exist "node_modules" (
     echo.
 )
 
+echo Checking for existing processes on port 5000...
+echo.
+
+REM Kill any existing processes on port 5000
+for /f "tokens=5" %%a in ('netstat -aon ^| find ":5000" ^| find "LISTENING"') do (
+    echo Stopping existing process on port 5000 (PID: %%a)
+    taskkill /F /PID %%a >nul 2>&1
+)
+
+REM Wait a moment for processes to fully terminate
+timeout /t 2 /nobreak >nul
+
 echo Starting the application...
 echo.
 echo The app will be available at:
