@@ -32,19 +32,53 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, X } from "lucide-react";
 
-const EXAMPLE_CODE = `When Button1.Click
+const EXAMPLE_CODE = `// Define variables
+Define counter as 0
+Define message as "Welcome"
+
+// Event handlers
+On Button1.Click do
+    Set counter to counter + 1
+    Set Label1.Text to counter
+
+On Button2.Click do
+    Call ShowMessage(message)
     Set Screen1.BackgroundColor to Red
 
-When Button2.Click
-    Set Label1.Text to "Hello World"`;
+// Procedure definition
+Define ShowMessage(text)
+    Set Label2.Text to text
+    
+// Conditional logic example
+On Button3.Click do
+    If counter > 5 then
+        Set Label3.Text to "High count"
+    Else
+        Set Label3.Text to "Low count"`;
 
 const PLACEHOLDER_TEXT = `Enter your pseudo code here...
-Example:
-When Button1.Click
-    Set Screen1.BackgroundColor to Red
 
-When Button2.Click
-    Set Label1.Text to "Hello World"`;
+Supported Commands:
+• On Component.Event do / When Component.Event
+• Set Component.Property to Value
+• Set Variable to Value
+• Call Component.Method
+• Define Variable as Value
+• Define ProcedureName(parameters)
+• If Condition then / Else If / Else
+• For each Item in List do
+• While Condition do
+
+Example:
+Define counter as 0
+
+On Button1.Click do
+    Set counter to counter + 1
+    Set Label1.Text to counter
+    If counter > 5 then
+        Set Screen1.BackgroundColor to Green
+    Else
+        Set Screen1.BackgroundColor to Red`;
 
 export default function Converter() {
   const [pseudoCode, setPseudoCode] = useState(EXAMPLE_CODE);
