@@ -1,4 +1,3 @@
-
 import { ParsedCode, PseudoEvent, ParseError } from "@shared/schema";
 
 interface PseudoVariable {
@@ -36,270 +35,318 @@ interface LoopBlock {
   actions: PseudoAction[];
 }
 
+export interface ParsedCode {
+  events: Array<{
+    component: string;
+    event: string;
+    actions: Array<{
+      type: 'set' | 'call' | 'assign' | 'if' | 'while' | 'foreach';
+      component?: string;
+      property?: string;
+      method?: string;
+      value?: string;
+      variable?: string;
+      condition?: string;
+      parameters?: string[];
+      actions?: any[];
+      elseActions?: any[];
+    }>;
+  }>;
+  variables: Array<{
+    name: string;
+    value: string;
+  }>;
+  procedures: Array<{
+    name: string;
+    parameters: string[];
+    actions: any[];
+  }>;
+  components: string[];
+  errors: Array<{
+    line: number;
+    message: string;
+  }>;
+}
 export function parsePseudoCode(code: string): ParsedCode {
   const lines = code.split('\n');
-  const events: PseudoEvent[] = [];
+  const events: ParsedCode['events'] = [];
+  const variables: ParsedCode['variables'] = [];
+  const procedures: ParsedCode['procedures'] = [];
   const components = new Set<string>();
-  const errors: ParseError[] = [];
-  const variables: PseudoVariable[] = [];
-  const procedures: PseudoProcedure[] = [];
-  
-  let currentEvent: PseudoEvent | null = null;
-  let currentProcedure: PseudoProcedure | null = null;
-  let currentConditional: ConditionalBlock | null = null;
-  let currentLoop: LoopBlock | null = null;
-  let indentLevel = 0;
-  
+  const errors: ParsedCode['errors'] = [];
+
+  let currentEvent: ParsedCode['events'][0] | null = null;
+  let currentProcedure: ParsedCode['procedures'][0] | null = null;
+  let currentContext: 'event' | 'procedure' | 'none' = 'none';
+
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmedLine = line.trim();
+    const line = lines[i].trim();
     const lineNumber = i + 1;
-    
+
     // Skip empty lines and comments
-    if (!trimmedLine || trimmedLine.startsWith('//')) {
+    if (!line || line.startsWith('//')) {
       continue;
     }
-    
-    // Calculate indentation level
-    const currentIndent = line.length - line.trimStart().length;
-    
-    // Reset context based on indentation
-    if (currentIndent <= indentLevel) {
-      currentConditional = null;
-      currentLoop = null;
-    }
-    
-    try {
-      // 1. Event Handlers: "On Component.Event do" or "When Component.Event"
-      const eventMatch = trimmedLine.match(/^(?:On|When)\s+(\w+)\.(\w+)(?:\s+do)?$/i);
-      if (eventMatch) {
-        // Save previous event if exists
-        if (currentEvent) {
-          events.push(currentEvent);
-        }
-        
-        const [, component, event] = eventMatch;
-        components.add(component);
-        
-        currentEvent = {
-          component,
-          event,
-          actions: []
-        };
-        indentLevel = currentIndent;
-        continue;
-      }
-      
-      // 2. Property Setting: "Set Component.Property to Value"
-      const setPropertyMatch = trimmedLine.match(/^Set\s+(\w+)\.(\w+)\s+to\s+(.+)$/i);
-      if (setPropertyMatch) {
-        const [, component, property, value] = setPropertyMatch;
-        components.add(component);
-        
-        const action = {
-          component,
-          property,
-          value: value.replace(/^["']|["']$/g, '') // Remove quotes if present
-        };
-        
-        addActionToCurrentContext(action, currentEvent, currentConditional, currentLoop, currentProcedure, errors, lineNumber);
-        continue;
-      }
-      
-      // 3. Variable Assignment: "Set Variable to Value"
-      const setVariableMatch = trimmedLine.match(/^Set\s+(\w+)\s+to\s+(.+)$/i);
-      if (setVariableMatch && !setPropertyMatch) {
-        const [, variable, value] = setVariableMatch;
-        
-        const action = {
-          type: 'assign' as const,
-          variable,
-          value: value.replace(/^["']|["']$/g, '')
-        };
-        
-        addActionToCurrentContext(action, currentEvent, currentConditional, currentLoop, currentProcedure, errors, lineNumber);
-        continue;
-      }
-      
-      // 4. Method Calls: "Call Component.Method" or "Call Component.Method with Parameters"
-      const callMatch = trimmedLine.match(/^Call\s+(\w+)\.(\w+)(?:\s+with\s+(.+))?$/i) || 
-                       trimmedLine.match(/^Call\s+(\w+)\(([^)]*)\)$/i);
-      if (callMatch) {
-        const [, component, method, params] = callMatch;
-        components.add(component);
-        
-        const parameters = params ? params.split(',').map(p => p.trim().replace(/^["']|["']$/g, '')) : [];
-        
-        const action = {
-          type: 'call' as const,
-          component,
-          method,
-          parameters
-        };
-        
-        addActionToCurrentContext(action, currentEvent, currentConditional, currentLoop, currentProcedure, errors, lineNumber);
-        continue;
-      }
-      
-      // 5. Variable Declaration: "Define Variable as Value"
-      const defineVariableMatch = trimmedLine.match(/^Define\s+(\w+)\s+as\s+(.+)$/i);
-      if (defineVariableMatch) {
-        const [, variable, value] = defineVariableMatch;
-        
-        variables.push({
-          name: variable,
-          value: value.replace(/^["']|["']$/g, '')
-        });
-        
-        const action = {
-          type: 'define' as const,
-          variable,
-          value: value.replace(/^["']|["']$/g, '')
-        };
-        
-        addActionToCurrentContext(action, currentEvent, currentConditional, currentLoop, currentProcedure, errors, lineNumber);
-        continue;
-      }
-      
-      // 6. Procedure Definition: "Define ProcedureName" or "Define ProcedureName(parameters)"
-      const defineProcedureMatch = trimmedLine.match(/^Define\s+(\w+)(?:\(([^)]*)\))?$/i);
-      if (defineProcedureMatch) {
-        const [, procName, params] = defineProcedureMatch;
-        
-        const parameters = params ? params.split(',').map(p => p.trim()) : [];
-        
-        currentProcedure = {
-          name: procName,
-          parameters,
-          actions: []
-        };
-        
-        procedures.push(currentProcedure);
-        indentLevel = currentIndent;
-        continue;
-      }
-      
-      // 7. Conditional Logic: "If Condition then"
-      const ifMatch = trimmedLine.match(/^If\s+(.+)\s+then$/i);
-      if (ifMatch) {
-        const [, condition] = ifMatch;
-        
-        currentConditional = {
-          type: 'if',
-          condition: condition.trim(),
-          actions: []
-        };
-        
-        indentLevel = currentIndent;
-        continue;
-      }
-      
-      // 8. Else If: "Else If Condition then"
-      const elseIfMatch = trimmedLine.match(/^Else\s+If\s+(.+)\s+then$/i);
-      if (elseIfMatch) {
-        const [, condition] = elseIfMatch;
-        
-        currentConditional = {
-          type: 'else_if',
-          condition: condition.trim(),
-          actions: []
-        };
-        
-        indentLevel = currentIndent;
-        continue;
-      }
-      
-      // 9. Else: "Else"
-      if (trimmedLine.match(/^Else$/i)) {
-        currentConditional = {
-          type: 'else',
-          actions: []
-        };
-        
-        indentLevel = currentIndent;
-        continue;
-      }
-      
-      // 10. For Each Loop: "For each Item in List do"
-      const forEachMatch = trimmedLine.match(/^For\s+each\s+(\w+)\s+in\s+(\w+)\s+do$/i);
-      if (forEachMatch) {
-        const [, item, list] = forEachMatch;
-        
-        currentLoop = {
-          type: 'for_each',
-          item,
-          list,
-          actions: []
-        };
-        
-        indentLevel = currentIndent;
-        continue;
-      }
-      
-      // 11. While Loop: "While Condition do"
-      const whileMatch = trimmedLine.match(/^While\s+(.+)\s+do$/i);
-      if (whileMatch) {
-        const [, condition] = whileMatch;
-        
-        currentLoop = {
-          type: 'while',
-          condition: condition.trim(),
-          actions: []
-        };
-        
-        indentLevel = currentIndent;
-        continue;
-      }
-      
-      // If we reach here, the line doesn't match any known pattern
-      errors.push({
-        line: lineNumber,
-        message: `Invalid syntax - see documentation for supported commands`
+
+    // Variable definition: "Define Variable as Value"
+    const defineVarMatch = line.match(/^Define\s+(\w+)\s+as\s+(.+)$/i);
+    if (defineVarMatch) {
+      const [, varName, value] = defineVarMatch;
+      variables.push({
+        name: varName,
+        value: value.trim()
       });
-      
-    } catch (error) {
+      continue;
+    }
+
+    // Procedure definition: "Define ProcedureName(parameters)"
+    const defineProcMatch = line.match(/^Define\s+(\w+)(?:\(([^)]*)\))?$/i);
+    if (defineProcMatch && !defineVarMatch) {
+      const [, procName, params] = defineProcMatch;
+
+      if (currentEvent) {
+        events.push(currentEvent);
+        currentEvent = null;
+      }
+      if (currentProcedure) {
+        procedures.push(currentProcedure);
+      }
+
+      const parameters = params ? params.split(',').map(p => p.trim()) : [];
+      currentProcedure = {
+        name: procName,
+        parameters,
+        actions: []
+      };
+      currentContext = 'procedure';
+      continue;
+    }
+
+    // Event handler: "When ComponentName.EventName" or "On ComponentName.EventName do"
+    const eventMatch = line.match(/^(?:When|On)\s+(\w+)\.(\w+)(?:\s+do)?$/i);
+    if (eventMatch) {
+      const [, component, event] = eventMatch;
+
+      if (currentEvent) {
+        events.push(currentEvent);
+      }
+      if (currentProcedure) {
+        procedures.push(currentProcedure);
+        currentProcedure = null;
+      }
+
+      currentEvent = {
+        component,
+        event,
+        actions: []
+      };
+      currentContext = 'event';
+
+      components.add(component);
+      continue;
+    }
+
+    // Variable assignment: "Set Variable to Value"
+    const assignMatch = line.match(/^Set\s+(\w+)\s+to\s+(.+)$/i);
+    if (assignMatch && !assignMatch[1].includes('.')) {
+      const [, variable, value] = assignMatch;
+
+      if (currentContext === 'none') {
+        errors.push({
+          line: lineNumber,
+          message: "Action found without preceding event handler, procedure, or control structure"
+        });
+        continue;
+      }
+
+      const action = {
+        type: 'assign' as const,
+        variable,
+        value: value.trim()
+      };
+
+      if (currentContext === 'event' && currentEvent) {
+        currentEvent.actions.push(action);
+      } else if (currentContext === 'procedure' && currentProcedure) {
+        currentProcedure.actions.push(action);
+      }
+      continue;
+    }
+
+    // Property setting: "Set ComponentName.Property to Value"
+    const setMatch = line.match(/^Set\s+(\w+)\.(\w+)\s+to\s+(.+)$/i);
+    if (setMatch) {
+      const [, component, property, value] = setMatch;
+
+      if (currentContext === 'none') {
+        errors.push({
+          line: lineNumber,
+          message: "Action found without preceding event handler, procedure, or control structure"
+        });
+        continue;
+      }
+
+      const action = {
+        type: 'set' as const,
+        component,
+        property,
+        value: value.trim()
+      };
+
+      if (currentContext === 'event' && currentEvent) {
+        currentEvent.actions.push(action);
+      } else if (currentContext === 'procedure' && currentProcedure) {
+        currentProcedure.actions.push(action);
+      }
+
+      components.add(component);
+      continue;
+    }
+
+    // Method call: "Call ComponentName.Method" or "Call ProcedureName(params)"
+    const callMatch = line.match(/^Call\s+(\w+)(?:\.(\w+))?(?:\s*\(([^)]*)\)|\s+(.+))?$/i);
+    if (callMatch) {
+      const [, componentOrProc, method, parenParams, spaceParams] = callMatch;
+
+      if (currentContext === 'none') {
+        errors.push({
+          line: lineNumber,
+          message: "Action found without preceding event handler, procedure, or control structure"
+        });
+        continue;
+      }
+
+      let parameters: string[] = [];
+      if (parenParams) {
+        parameters = parenParams.split(',').map(p => p.trim()).filter(p => p);
+      } else if (spaceParams) {
+        parameters = [spaceParams.trim()];
+      }
+
+      const action = {
+        type: 'call' as const,
+        component: componentOrProc,
+        method: method || componentOrProc,
+        parameters
+      };
+
+      if (currentContext === 'event' && currentEvent) {
+        currentEvent.actions.push(action);
+      } else if (currentContext === 'procedure' && currentProcedure) {
+        currentProcedure.actions.push(action);
+      }
+
+      if (method) {
+        components.add(componentOrProc);
+      }
+      continue;
+    }
+
+    // Conditional: "If Condition then"
+    const ifMatch = line.match(/^If\s+(.+)\s+then$/i);
+    if (ifMatch) {
+      const [, condition] = ifMatch;
+
+      if (currentContext === 'none') {
+        errors.push({
+          line: lineNumber,
+          message: "Action found without preceding event handler, procedure, or control structure"
+        });
+        continue;
+      }
+
+      const action = {
+        type: 'if' as const,
+        condition: condition.trim(),
+        actions: [],
+        elseActions: []
+      };
+
+      if (currentContext === 'event' && currentEvent) {
+        currentEvent.actions.push(action);
+      } else if (currentContext === 'procedure' && currentProcedure) {
+        currentProcedure.actions.push(action);
+      }
+      continue;
+    }
+
+    // While loop: "While Condition do"
+    const whileMatch = line.match(/^While\s+(.+)\s+do$/i);
+    if (whileMatch) {
+      const [, condition] = whileMatch;
+
+      if (currentContext === 'none') {
+        errors.push({
+          line: lineNumber,
+          message: "Action found without preceding event handler, procedure, or control structure"
+        });
+        continue;
+      }
+
+      const action = {
+        type: 'while' as const,
+        condition: condition.trim(),
+        actions: []
+      };
+
+      if (currentContext === 'event' && currentEvent) {
+        currentEvent.actions.push(action);
+      } else if (currentContext === 'procedure' && currentProcedure) {
+        currentProcedure.actions.push(action);
+      }
+      continue;
+    }
+
+    // For each loop: "For each Item in List do"
+    const forEachMatch = line.match(/^For\s+each\s+(\w+)\s+in\s+(\w+)\s+do$/i);
+    if (forEachMatch) {
+      const [, item, list] = forEachMatch;
+
+      if (currentContext === 'none') {
+        errors.push({
+          line: lineNumber,
+          message: "Action found without preceding event handler, procedure, or control structure"
+        });
+        continue;
+      }
+
+      const action = {
+        type: 'foreach' as const,
+        variable: item,
+        value: list,
+        actions: []
+      };
+
+      if (currentContext === 'event' && currentEvent) {
+        currentEvent.actions.push(action);
+      } else if (currentContext === 'procedure' && currentProcedure) {
+        currentProcedure.actions.push(action);
+      }
+      continue;
+    }
+
+    // If we reach here, it's an unrecognized line
+    if (line && !line.match(/^(?:Else|End)/i)) {
       errors.push({
         line: lineNumber,
-        message: `Parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: `Unrecognized syntax: ${line}`
       });
     }
   }
-  
-  // Don't forget the last event
+
+  // Add the last event/procedure if exists
   if (currentEvent) {
     events.push(currentEvent);
   }
-  
+  if (currentProcedure) {
+    procedures.push(currentProcedure);
+  }
+
   return {
     events,
-    components: Array.from(components).sort(),
-    errors,
     variables,
-    procedures
+    procedures,
+    components: Array.from(components),
+    errors
   };
-}
-
-function addActionToCurrentContext(
-  action: any,
-  currentEvent: PseudoEvent | null,
-  currentConditional: ConditionalBlock | null,
-  currentLoop: LoopBlock | null,
-  currentProcedure: PseudoProcedure | null,
-  errors: ParseError[],
-  lineNumber: number
-) {
-  if (currentLoop) {
-    currentLoop.actions.push(action);
-  } else if (currentConditional) {
-    currentConditional.actions.push(action);
-  } else if (currentProcedure) {
-    currentProcedure.actions.push(action);
-  } else if (currentEvent) {
-    currentEvent.actions.push(action);
-  } else {
-    errors.push({
-      line: lineNumber,
-      message: "Action found without preceding event handler, procedure, or control structure"
-    });
-  }
 }

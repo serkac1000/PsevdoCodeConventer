@@ -35,26 +35,41 @@ import { Upload, X } from "lucide-react";
 const EXAMPLE_CODE = `// Define variables
 Define counter as 0
 Define message as "Welcome"
+Define nameList as ["Alice", "Bob", "Charlie"]
+
+// Procedure definition
+Define ShowMessage(text)
+    Set Label2.Text to text
+    Call Player1.Start
 
 // Event handlers
 On Button1.Click do
     Set counter to counter + 1
     Set Label1.Text to counter
+    If counter > 5 then
+        Set Label3.Text to "High count"
+        Set Screen1.BackgroundColor to Green
+    Else
+        Set Label3.Text to "Low count"
+        Set Screen1.BackgroundColor to Red
 
 On Button2.Click do
     Call ShowMessage(message)
-    Set Screen1.BackgroundColor to Red
+    For each name in nameList do
+        Set Label4.Text to name
 
-// Procedure definition
-Define ShowMessage(text)
-    Set Label2.Text to text
-    
-// Conditional logic example
-On Button3.Click do
-    If counter > 5 then
-        Set Label3.Text to "High count"
-    Else
-        Set Label3.Text to "Low count"`;
+// Extension example (GestureDetector)
+On GestureDetector1.Swipe do
+    If direction = "left" then
+        Set Label5.Text to "Left Swipe"
+    Else If direction = "right" then
+        Set Label5.Text to "Right Swipe"
+
+// Screen initialization
+On Screen1.Initialize do
+    Set Label1.Text to "App Started"
+    While counter < 3 do
+        Set counter to counter + 1`;
 
 const PLACEHOLDER_TEXT = `Enter your pseudo code here...
 
@@ -62,12 +77,17 @@ Supported Commands:
 • On Component.Event do / When Component.Event
 • Set Component.Property to Value
 • Set Variable to Value
-• Call Component.Method
+• Call Component.Method [with Parameters]
 • Define Variable as Value
 • Define ProcedureName(parameters)
 • If Condition then / Else If / Else
 • For each Item in List do
 • While Condition do
+
+Extension Support:
+• Upload .aix extension files
+• Use extension components in your code
+• Example: On GestureDetector1.Swipe do
 
 Example:
 Define counter as 0
@@ -77,8 +97,13 @@ On Button1.Click do
     Set Label1.Text to counter
     If counter > 5 then
         Set Screen1.BackgroundColor to Green
+        Call Player1.Start
     Else
-        Set Screen1.BackgroundColor to Red`;
+        Set Screen1.BackgroundColor to Red
+
+On GestureDetector1.Swipe do
+    If direction = "left" then
+        Set Label2.Text to "Swiped Left"`;
 
 export default function Converter() {
   const [pseudoCode, setPseudoCode] = useState(EXAMPLE_CODE);
@@ -387,9 +412,65 @@ export default function Converter() {
               {parsedCode && (
                 <div className="space-y-4">
                   <div>
+                    {/* Variables */}
+                    {parsedCode.variables && parsedCode.variables.length > 0 && (
+                      <div className="mb-4">
+                        <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center space-x-2">
+                          <EllipsisVertical className="text-sm" />
+                          <span>Variables</span>
+                        </h3>
+                        <div className="space-y-1">
+                          {parsedCode.variables.map((variable, index) => (
+                            <div key={index} className="flex items-center space-x-2 text-sm text-gray-700 bg-blue-50 p-2 rounded">
+                              <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                              <span className="font-mono">
+                                {variable.name} = {variable.value}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Procedures */}
+                    {parsedCode.procedures && parsedCode.procedures.length > 0 && (
+                      <div className="mb-4">
+                        <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center space-x-2">
+                          <BookUser className="text-sm" />
+                          <span>Procedures</span>
+                        </h3>
+                        <div className="space-y-2">
+                          {parsedCode.procedures.map((procedure, index) => (
+                            <Card key={index} className="bg-purple-50 border border-purple-200">
+                              <CardContent className="p-3">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <Bolt className="text-purple-600 text-sm" />
+                                  <span className="font-mono text-sm font-medium text-gray-900">
+                                    {procedure.name}({procedure.parameters.join(', ')})
+                                  </span>
+                                </div>
+                                <div className="ml-6 space-y-1">
+                                  {procedure.actions.map((action, actionIndex) => (
+                                    <div key={actionIndex} className="flex items-center space-x-2 text-sm text-gray-700">
+                                      <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                                      <span className="font-mono">
+                                        {action.type === 'set' && `${action.component}.${action.property} = ${action.value}`}
+                                        {action.type === 'call' && `Call ${action.component}.${action.method}`}
+                                        {action.type === 'assign' && `${action.variable} = ${action.value}`}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center space-x-2">
                       <Flag className="text-sm" />
-                      <span>Parsed Structure</span>
+                      <span>Event Handlers</span>
                     </h3>
 
                     {parsedCode.events.map((event, index) => (

@@ -307,7 +307,7 @@ function generateValueBlock(value: string): string {
   return xml;
 }
 
-export async function generateAIA(parsedCode: ParsedCode, userExtensions: Array<{name: string, version: string, uuid: string}> = []): Promise<Blob> {
+export async function generateAIA(parsedCode: ParsedCode, userExtensions: Array<{name: string, version: string, uuid: string, file?: File}> = []): Promise<Blob> {
   const zip = new JSZip();
 
   // Create the correct AIA structure
@@ -326,6 +326,14 @@ export async function generateAIA(parsedCode: ParsedCode, userExtensions: Array<
 
   // Add build directory structure
   zip.file("build/README.txt", "This is the build folder for your project.\n\nFiles in this folder are generated automatically by App Inventor.\n\nDo not edit the files in this folder.");
+
+  // Add extension files if provided
+  for (const extension of userExtensions) {
+    if (extension.file) {
+      const extensionData = await extension.file.arrayBuffer();
+      zip.file(`assets/${extension.file.name}`, extensionData);
+    }
+  }
 
   // Generate the ZIP file
   return await zip.generateAsync({ type: "blob" });
