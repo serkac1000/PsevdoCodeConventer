@@ -75,9 +75,19 @@ versionname=1.0
 useslocation=False`;
 }
 
-function generateFormFile(parsedCode: ParsedCode): string {
+function generateFormFile(parsedCode: ParsedCode, userExtensions: Array<{name: string, version: string, uuid: string}> = []): string {
   const components: any[] = [];
   const usedExtensions = new Set<string>();
+  
+  // Merge user extensions with built-in extensions
+  const allExtensions = {...EXTENSIONS};
+  userExtensions.forEach(ext => {
+    allExtensions[ext.name] = {
+      name: ext.name,
+      version: ext.version,
+      uuid: ext.uuid
+    };
+  });
 
   // Create component definitions (excluding Screen components)
   for (const componentName of parsedCode.components) {
@@ -86,7 +96,7 @@ function generateFormFile(parsedCode: ParsedCode): string {
     const componentType = getComponentType(componentName);
     
     // Track which extensions are used
-    if (EXTENSIONS[componentType]) {
+    if (allExtensions[componentType]) {
       usedExtensions.add(componentType);
     }
     
@@ -125,15 +135,15 @@ function generateFormFile(parsedCode: ParsedCode): string {
   if (usedExtensions.size > 0) {
     form.Properties["$Extensions"] = Array.from(usedExtensions).map(extName => ({
       "$Name": extName,
-      "$Version": EXTENSIONS[extName].version,
-      "$UUID": EXTENSIONS[extName].uuid
+      "$Version": allExtensions[extName].version,
+      "$UUID": allExtensions[extName].uuid
     }));
   }
 
   return `#|\n$JSON\n${JSON.stringify(form)}\n|#`;
 }
 
-function generateBlocksFile(parsedCode: ParsedCode): string {
+function generateBlocksFile(parsedCode: ParsedCode, userExtensions: Array<{name: string, version: string, uuid: string}> = []): string {
   let xml = '<xml>\n';
   let yPosition = 134;
 
@@ -193,18 +203,18 @@ function generateBlocksFile(parsedCode: ParsedCode): string {
   return xml;
 }
 
-export async function generateAIA(parsedCode: ParsedCode): Promise<Blob> {
+export async function generateAIA(parsedCode: ParsedCode, userExtensions: Array<{name: string, version: string, uuid: string}> = []): Promise<Blob> {
   const zip = new JSZip();
   
   // Create the correct AIA structure
   zip.file("youngandroidproject/project.properties", generateProjectProperties());
   
   // Generate form file (.scm)
-  const formContent = generateFormFile(parsedCode);
+  const formContent = generateFormFile(parsedCode, userExtensions);
   zip.file("src/appinventor/ai_anonymous/ConvertedApp/Screen1.scm", formContent);
   
   // Generate blocks file (.bky) 
-  const blocksContent = generateBlocksFile(parsedCode);
+  const blocksContent = generateBlocksFile(parsedCode, userExtensions);
   zip.file("src/appinventor/ai_anonymous/ConvertedApp/Screen1.bky", blocksContent);
   
   // Add required meta files

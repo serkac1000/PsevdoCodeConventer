@@ -27,6 +27,9 @@ import { parsePseudoCode } from "@/lib/pseudo-parser";
 import { generateAIA } from "@/lib/aia-generator";
 import { ParsedCode } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Upload, X } from "lucide-react";
 
 const EXAMPLE_CODE = `// When Button1 is clicked
 When Button1.Click
@@ -58,6 +61,8 @@ export default function Converter() {
   const [isGenerating, setIsGenerating] = useState(false);
   const editorRef = useRef<MonacoEditorRef>(null);
   const { toast } = useToast();
+  const [extensions, setExtensions] = useState<Array<{name: string, version: string, uuid: string}>>([]);
+  const [newExtension, setNewExtension] = useState({name: '', version: '', uuid: ''});
 
   const handleParsePseudoCode = useCallback((code: string) => {
     try {
@@ -97,8 +102,8 @@ export default function Converter() {
 
     setIsGenerating(true);
     try {
-      const aiaBlob = await generateAIA(parsedCode);
-      
+      const aiaBlob = await generateAIA(parsedCode, extensions);
+
       // Create download link
       const url = URL.createObjectURL(aiaBlob);
       const a = document.createElement('a');
@@ -123,6 +128,17 @@ export default function Converter() {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const addExtension = () => {
+    if (newExtension.name && newExtension.version && newExtension.uuid) {
+      setExtensions([...extensions, {...newExtension}]);
+      setNewExtension({name: '', version: '', uuid: ''});
+    }
+  };
+
+  const removeExtension = (index: number) => {
+    setExtensions(extensions.filter((_, i) => i !== index));
   };
 
   const isValid = parsedCode && parsedCode.errors.length === 0;
@@ -166,7 +182,7 @@ export default function Converter() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Main Workspace */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
-          
+
           {/* Input Panel */}
           <Card className="flex flex-col">
             <CardHeader className="pb-4">
@@ -185,7 +201,7 @@ export default function Converter() {
                 </div>
               </CardTitle>
             </CardHeader>
-            
+
             <CardContent className="flex-1 p-6">
               <MonacoEditor
                 ref={editorRef}
@@ -257,7 +273,7 @@ export default function Converter() {
                       <Flag className="text-sm" />
                       <span>Parsed Structure</span>
                     </h3>
-                    
+
                     {parsedCode.events.map((event, index) => (
                       <Card key={index} className="mb-3 bg-gray-50 border border-gray-200">
                         <CardContent className="p-4">
@@ -332,6 +348,76 @@ export default function Converter() {
           </Card>
         </div>
 
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Upload className="text-blue-600" />
+              <span>Extensions</span>
+            </CardTitle>
+            <CardContent>
+              Add MIT App Inventor extensions to your project
+            </CardContent>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="ext-name">Extension Name</Label>
+                <Input
+                  id="ext-name"
+                  placeholder="e.g. Clock"
+                  value={newExtension.name}
+                  onChange={(e) => setNewExtension({...newExtension, name: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ext-version">Version</Label>
+                <Input
+                  id="ext-version"
+                  placeholder="e.g. 1"
+                  value={newExtension.version}
+                  onChange={(e) => setNewExtension({...newExtension, version: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ext-uuid">UUID</Label>
+                <Input
+                  id="ext-uuid"
+                  placeholder="com.example.extension"
+                  value={newExtension.uuid}
+                  onChange={(e) => setNewExtension({...newExtension, uuid: e.target.value})}
+                />
+              </div>
+            </div>
+            <Button onClick={addExtension} className="w-full" variant="outline">
+              <Upload className="h-4 w-4 mr-2" />
+              Add Extension
+            </Button>
+
+            {extensions.length > 0 && (
+              <div className="space-y-2">
+                <Label>Added Extensions:</Label>
+                <div className="space-y-2">
+                  {extensions.map((ext, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="font-medium">{ext.name}</div>
+                        <div className="text-sm text-gray-600">v{ext.version} • {ext.uuid}</div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeExtension(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Documentation Panel */}
         <Collapsible open={showDocumentation} onOpenChange={setShowDocumentation}>
           <CollapsibleContent>
@@ -342,7 +428,7 @@ export default function Converter() {
                   <span>Documentation & Examples</span>
                 </CardTitle>
               </CardHeader>
-              
+
               <CardContent className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Syntax Guide */}
