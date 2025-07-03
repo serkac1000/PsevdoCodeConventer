@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,28 +32,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, X } from "lucide-react";
 
-const EXAMPLE_CODE = `// When Button1 is clicked
-When Button1.Click
+const EXAMPLE_CODE = `When Button1.Click
     Set Screen1.BackgroundColor to Red
 
-// When Button2 is clicked
 When Button2.Click
-    Set Screen1.BackgroundColor to Green
-
-// When Button3 is clicked
-When Button3.Click
-    Set Label1.Text to "Hello World"
-    Set Label1.TextColor to Blue`;
+    Set Label1.Text to "Hello World"`;
 
 const PLACEHOLDER_TEXT = `Enter your pseudo code here...
 Example:
-// When Button1 is clicked
 When Button1.Click
     Set Screen1.BackgroundColor to Red
 
-// When Button2 is clicked
 When Button2.Click
-    Set Screen1.BackgroundColor to Green`;
+    Set Label1.Text to "Hello World"`;
 
 export default function Converter() {
   const [pseudoCode, setPseudoCode] = useState(EXAMPLE_CODE);
@@ -61,8 +53,7 @@ export default function Converter() {
   const [isGenerating, setIsGenerating] = useState(false);
   const editorRef = useRef<MonacoEditorRef>(null);
   const { toast } = useToast();
-  const [extensions, setExtensions] = useState<Array<{name: string, version: string, uuid: string}>>([]);
-  const [newExtension, setNewExtension] = useState({name: '', version: '', uuid: ''});
+  const [extensions, setExtensions] = useState<Array<{name: string, version: string, uuid: string, file?: File}>>([]);
 
   const handleParsePseudoCode = useCallback((code: string) => {
     try {
@@ -130,11 +121,37 @@ export default function Converter() {
     }
   };
 
-  const addExtension = () => {
-    if (newExtension.name && newExtension.version && newExtension.uuid) {
-      setExtensions([...extensions, {...newExtension}]);
-      setNewExtension({name: '', version: '', uuid: ''});
-    }
+  const handleExtensionUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach(file => {
+      if (file.name.endsWith('.aix')) {
+        // Extract extension info from filename
+        const name = file.name.replace('.aix', '');
+        const newExtension = {
+          name: name,
+          version: "1",
+          uuid: `com.extension.${name.toLowerCase()}`,
+          file: file
+        };
+        setExtensions(prev => [...prev, newExtension]);
+        
+        toast({
+          title: "Extension Added",
+          description: `${file.name} has been added to your project.`,
+        });
+      } else {
+        toast({
+          title: "Invalid File",
+          description: "Please upload only .aix extension files.",
+          variant: "destructive",
+        });
+      }
+    });
+    
+    // Reset input
+    event.target.value = '';
   };
 
   const removeExtension = (index: number) => {
@@ -180,6 +197,73 @@ export default function Converter() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Extension Upload Section */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Upload className="text-blue-600" />
+              <span>Upload Extensions</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+              <div className="text-center">
+                <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                <div className="mt-4">
+                  <label htmlFor="extension-upload" className="cursor-pointer">
+                    <span className="mt-2 block text-sm font-medium text-gray-900">
+                      Upload .aix extension files
+                    </span>
+                    <span className="mt-1 block text-sm text-gray-500">
+                      Select multiple .aix files to add to your project
+                    </span>
+                  </label>
+                  <input
+                    id="extension-upload"
+                    type="file"
+                    className="sr-only"
+                    multiple
+                    accept=".aix"
+                    onChange={handleExtensionUpload}
+                  />
+                </div>
+                <div className="mt-4">
+                  <Button asChild variant="outline">
+                    <label htmlFor="extension-upload" className="cursor-pointer">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Choose Files
+                    </label>
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {extensions.length > 0 && (
+              <div className="space-y-2">
+                <Label>Uploaded Extensions:</Label>
+                <div className="space-y-2">
+                  {extensions.map((ext, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-green-50">
+                      <div className="flex-1">
+                        <div className="font-medium">{ext.name}</div>
+                        <div className="text-sm text-gray-600">v{ext.version} • {ext.uuid}</div>
+                        {ext.file && <div className="text-xs text-gray-500">{ext.file.name}</div>}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeExtension(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Main Workspace */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
 
@@ -219,7 +303,7 @@ export default function Converter() {
               <div className="flex items-start space-x-3">
                 <AlertCircle className="text-primary text-sm mt-0.5" />
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900 mb-1">Supported Syntax</h4>
+                  <h4 className="text-sm font-medium text-gray-900 mb-1">Syntax Rules</h4>
                   <p className="text-xs text-gray-600">
                     Use <code className="bg-gray-200 px-1 rounded">When ComponentName.Event</code> for events, 
                     <code className="bg-gray-200 px-1 rounded ml-1">Set ComponentName.Property to Value</code> for actions
@@ -332,7 +416,7 @@ export default function Converter() {
                   <File className="text-primary" />
                   <div>
                     <p className="text-sm font-medium text-gray-900">Ready to Download</p>
-                    <p className="text-xs text-gray-600">AIA file will contain all parsed components and blocks</p>
+                    <p className="text-xs text-gray-600">AIA file will contain all components, blocks, and extensions</p>
                   </div>
                 </div>
                 <Button 
@@ -347,76 +431,6 @@ export default function Converter() {
             </CardContent>
           </Card>
         </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Upload className="text-blue-600" />
-              <span>Extensions</span>
-            </CardTitle>
-            <CardContent>
-              Add MIT App Inventor extensions to your project
-            </CardContent>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="ext-name">Extension Name</Label>
-                <Input
-                  id="ext-name"
-                  placeholder="e.g. Clock"
-                  value={newExtension.name}
-                  onChange={(e) => setNewExtension({...newExtension, name: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ext-version">Version</Label>
-                <Input
-                  id="ext-version"
-                  placeholder="e.g. 1"
-                  value={newExtension.version}
-                  onChange={(e) => setNewExtension({...newExtension, version: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ext-uuid">UUID</Label>
-                <Input
-                  id="ext-uuid"
-                  placeholder="com.example.extension"
-                  value={newExtension.uuid}
-                  onChange={(e) => setNewExtension({...newExtension, uuid: e.target.value})}
-                />
-              </div>
-            </div>
-            <Button onClick={addExtension} className="w-full" variant="outline">
-              <Upload className="h-4 w-4 mr-2" />
-              Add Extension
-            </Button>
-
-            {extensions.length > 0 && (
-              <div className="space-y-2">
-                <Label>Added Extensions:</Label>
-                <div className="space-y-2">
-                  {extensions.map((ext, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="font-medium">{ext.name}</div>
-                        <div className="text-sm text-gray-600">v{ext.version} • {ext.uuid}</div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeExtension(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
         {/* Documentation Panel */}
         <Collapsible open={showDocumentation} onOpenChange={setShowDocumentation}>
