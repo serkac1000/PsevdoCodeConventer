@@ -9,7 +9,6 @@ const COMPONENT_TYPES: Record<string, string> = {
   TextBox: "TextBox",
   Image: "Image",
   Player: "Player",
-  GestureDetector: "GestureDetector",
   Clock: "Clock",
   TinyDB: "TinyDB",
   Notifier: "Notifier",
@@ -22,6 +21,12 @@ const EXTENSIONS: Record<string, any> = {
     name: "Clock",
     version: "1",
     uuid: "com.google.appinventor.components.runtime.Clock"
+  },
+  // GestureDetector extension
+  GestureDetector: {
+    name: "GestureDetector",
+    version: "1",
+    uuid: "com.extension.aryan.gupta.gesturesdetector"
   },
   // Add more extensions as needed
 };
