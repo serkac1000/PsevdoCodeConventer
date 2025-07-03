@@ -42,22 +42,53 @@ app.use((req, res, next) => {
 
 async function killPortProcesses(port: number) {
   try {
-    const { stdout } = await execAsync(`lsof -ti :${port}`);
-    const pids = stdout.trim().split('\n').filter(pid => pid);
+    const isWindows = process.platform === 'win32';
     
-    if (pids.length > 0) {
-      log(`Found processes on port ${port}: ${pids.join(', ')}`);
-      for (const pid of pids) {
-        try {
-          await execAsync(`kill -9 ${pid}`);
-          log(`Killed process ${pid} on port ${port}`);
-        } catch (error) {
-          log(`Failed to kill process ${pid}: ${error}`);
+    if (isWindows) {
+      // Windows command to find processes using the port
+      const { stdout } = await execAsync(`netstat -ano | findstr :${port}`);
+      const lines = stdout.trim().split('\n').filter(line => line.includes('LISTENING'));
+      
+      const pids = new Set<string>();
+      for (const line of lines) {
+        const parts = line.trim().split(/\s+/);
+        const pid = parts[parts.length - 1];
+        if (pid && pid !== '0') {
+          pids.add(pid);
+        }
+      }
+      
+      if (pids.size > 0) {
+        log(`Found processes on port ${port}: ${Array.from(pids).join(', ')}`);
+        for (const pid of pids) {
+          try {
+            await execAsync(`taskkill /F /PID ${pid}`);
+            log(`Killed process ${pid} on port ${port}`);
+          } catch (error) {
+            log(`Failed to kill process ${pid}: ${error}`);
+          }
+        }
+      }
+    } else {
+      // Linux/Unix command
+      const { stdout } = await execAsync(`lsof -ti :${port}`);
+      const pids = stdout.trim().split('\n').filter(pid => pid);
+      
+      if (pids.length > 0) {
+        log(`Found processes on port ${port}: ${pids.join(', ')}`);
+        for (const pid of pids) {
+          try {
+            await execAsync(`kill -9 ${pid}`);
+            log(`Killed process ${pid} on port ${port}`);
+          } catch (error) {
+            log(`Failed to kill process ${pid}: ${error}`);
+          }
         }
       }
     }
   } catch (error) {
-    // No processes found on port or lsof failed, which is fine
+    // No processes found on port or command failed, which is fine
+    log(`No processes found on port ${port} or command failed`);
   }
 }
 
