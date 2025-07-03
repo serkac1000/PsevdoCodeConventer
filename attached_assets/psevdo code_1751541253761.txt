@@ -1,0 +1,245 @@
+MIT App Inventor Pseudocode Command Documentation
+This document outlines the commands and syntax used for generating pseudocode tailored to MIT App Inventor, a block-based programming environment for building mobile apps. The pseudocode reflects the event-driven, component-based structure of MIT App Inventor, making it easy to translate into visual blocks.
+1. Event Handlers
+Event handlers define actions triggered by user interactions or system events.
+
+Syntax: On Component.Event do
+
+Description: Specifies an event for a component (e.g., Button, Screen) and the actions to perform when the event occurs.
+
+Parameters:
+
+Component: The name of the component (e.g., Button1, Screen1, GestureDetector1).
+Event: The specific event (e.g., Click, Initialize, Swipe).
+
+
+Example:
+On Button1.Click do
+    Set Label1.Text to "Button Clicked"
+
+Triggers when Button1 is clicked, setting Label1's text.
+
+Supported Events (common examples):
+
+Click: For buttons or interactive components.
+Initialize: For Screen1 or other components when they load.
+TextChanged: For text input components like TextBox.
+Swipe: For extensions like aryan.gupta.GesturesDetector.aix.
+GotFocus, LostFocus, Touched, etc., depending on the component.
+
+
+
+2. Property Manipulation
+Commands to set or modify component properties.
+
+Syntax: Set Component.Property to Value
+
+Description: Changes the property of a component to a specified value.
+
+Parameters:
+
+Component: The component name (e.g., Label1, Screen1).
+Property: The property to modify (e.g., Text, BackgroundColor).
+Value: The new value (e.g., "Hello", Red, true).
+
+
+Example:
+Set Screen1.BackgroundColor to Red
+
+Sets the screen's background color to red.
+
+Common Properties:
+
+Text: For labels, textboxes, or buttons (e.g., Label1.Text).
+BackgroundColor: For screens or arrangements (e.g., Screen1.BackgroundColor).
+Visible: Boolean to show/hide components (e.g., Button1.Visible).
+FontSize, Width, Height, etc., depending on the component.
+
+
+
+3. Method Calls
+Commands to invoke component methods or procedures.
+
+Syntax: Call Component.Method [with Parameters]
+
+Description: Executes a method associated with a component or a user-defined procedure.
+
+Parameters:
+
+Component: The component or procedure name.
+Method: The method to call (e.g., Start, Stop, or a procedure name).
+Parameters: Optional inputs required by the method.
+
+
+Example:
+Call Player1.Start
+
+Starts playback for a Player component.
+
+Example with Parameters:
+Call ShowMessage("Hello World")
+
+Calls a user-defined procedure ShowMessage with the parameter "Hello World".
+
+Common Methods:
+
+Start, Stop, Pause: For media components like Player or VideoPlayer.
+Vibrate: For PhoneStatus (e.g., Call PhoneStatus.Vibrate 500).
+Extension-specific methods (e.g., GestureDetector1.SetArrangement).
+
+
+
+4. Variable Declaration and Assignment
+Commands to define and manipulate variables.
+
+Syntax for Declaration: Define Variable as Value
+
+Description: Initializes a global or local variable with a starting value.
+
+Parameters:
+
+Variable: The variable name (e.g., counter, username).
+Value: Initial value (e.g., 0, "Guest", false).
+
+
+Example:
+Define counter as 0
+
+
+Syntax for Assignment: Set Variable to Value
+
+Description: Updates the value of an existing variable.
+
+Example:
+Set counter to counter + 1
+
+Increments the counter variable by 1.
+
+
+5. Conditional Logic
+Commands for decision-making.
+
+Syntax:If Condition then
+    Action(s)
+[Else If Condition then
+    Action(s)]
+[Else
+    Action(s)]
+
+
+Description: Executes actions based on whether conditions are true.
+Parameters:
+Condition: A boolean expression (e.g., TextBox1.Text = "hello").
+Action(s): Commands to execute if the condition is true.
+
+
+Example:If TextBox1.Text = "hello" then
+    Set Label1.Text to "Match"
+Else
+    Set Label1.Text to "No Match"
+
+Checks if TextBox1 contains "hello" and updates Label1 accordingly.
+
+6. Loops
+Commands for repeating actions.
+
+Syntax for For-Each Loop:
+For each Item in List do
+    Action(s)
+
+
+Description: Iterates over each element in a list.
+
+Parameters:
+
+Item: A temporary variable representing the current list element.
+List: The list to iterate over (e.g., List1).
+
+
+Example:
+For each name in NameList do
+    Set Label1.Text to name
+
+
+Syntax for While Loop:
+While Condition do
+    Action(s)
+
+
+Description: Repeats actions as long as the condition is true.
+
+Example:
+While counter < 5 do
+    Set counter to counter + 1
+    Set Label1.Text to counter
+
+
+
+7. Procedure Definition
+Commands to define reusable procedures.
+
+Syntax:Define ProcedureName [with Parameter(s)]
+    Action(s)
+
+
+Description: Creates a reusable block of code, optionally with parameters.
+Parameters:
+ProcedureName: The name of the procedure.
+Parameter(s): Optional inputs (e.g., text, number).
+
+
+Example:Define ShowMessage(message)
+    Set Label1.Text to message
+
+Defines a procedure ShowMessage that sets Label1.Text to the provided message.
+
+8. Extension-Specific Commands
+Commands for extensions like aryan.gupta.GesturesDetector.aix.
+
+Syntax: Similar to native components, using On ExtensionComponent.Event do or Set ExtensionComponent.Property to Value.
+
+Description: Reflects the specific events, properties, or methods provided by the extension.
+
+Example (for aryan.gupta.GesturesDetector.aix):
+On GestureDetector1.Swipe do
+    If direction = "left" then
+        Set Label1.Text to "Left Swipe"
+
+Detects a left swipe and updates Label1.
+
+Common Extension Events/Properties:
+
+For GestureDetector: Events like Swipe, DoubleClick, SingleTap, LongPress.
+Parameters like direction (e.g., "left", "right") for swipe events.
+Properties like Arrangement to specify the target component.
+
+
+
+9. General Conventions
+
+Component Naming: Uses component names as defined in the MIT App Inventor Designer (e.g., Button1, Label1, Screen1).
+Indentation: Actions within event handlers, conditions, or loops are indented for clarity.
+Plain English: Commands use simple, action-oriented terms (e.g., "Set", "Call", "If") to match MIT App Inventor's beginner-friendly approach.
+No Code Fences: Pseudocode is written as plain text, not wrapped in markdown code blocks, to reflect the artifact’s content.
+Assumptions: If the user request is vague, assumes common components (e.g., Label for output) or default behaviors unless specified otherwise.
+
+10. Translation to MIT App Inventor
+To implement the pseudocode:
+
+Designer: Add components (e.g., Button, Label, VerticalArrangement) and set their properties (e.g., names, text).
+Blocks Editor:
+Use event blocks (e.g., when Button1.Click) for On commands.
+Use setter blocks for Set commands (e.g., set Label1.Text to).
+Use control blocks for If, For each, or While.
+Use procedure blocks for Define and Call.
+For extensions, drag the extension component into the Designer and use its specific blocks.
+
+
+
+11. Notes
+
+The pseudocode is not executable code but a high-level representation of MIT App Inventor blocks.
+Extension-specific commands (e.g., for aryan.gupta.GesturesDetector.aix) depend on the extension’s documentation or community-provided details.
+If specific components or behaviors are requested, the pseudocode adapts to include them while maintaining the above structure.
+
+This documentation ensures that pseudocode is consistent, clear, and directly translatable to MIT App Inventor’s block-based environment.
