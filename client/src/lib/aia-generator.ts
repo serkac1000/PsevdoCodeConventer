@@ -357,7 +357,11 @@ function generateValueBlock(value: string): string {
 
   // Handle different value types
   if (COLOR_MAPPING[value]) {
-    xml += `          <block type="color_red">\n`;
+    // Use appropriate color block type based on the color
+    const colorBlockType = value === 'Red' ? 'color_red' : 
+                          value === 'Green' ? 'color_green' : 
+                          value === 'Blue' ? 'color_blue' : 'color_red';
+    xml += `          <block type="${colorBlockType}">\n`;
     xml += `            <title name="COLOR">${COLOR_MAPPING[value]}</title>\n`;
     xml += `          </block>\n`;
   } else if (value.match(/^\d+$/)) {

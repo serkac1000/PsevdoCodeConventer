@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -180,7 +179,7 @@ export default function Converter() {
 
       console.log("Calling generateAIA...");
       const aiaBlob = await generateAIA(parsedCode, extensions);
-      
+
       if (!aiaBlob || aiaBlob.size === 0) {
         throw new Error("Generated AIA file is empty or invalid");
       }
@@ -211,7 +210,7 @@ export default function Converter() {
         parsedCode: parsedCode,
         extensions: extensions
       });
-      
+
       toast({
         title: "Generation Failed",
         description: `Failed to generate AIA file: ${error.message}`,
@@ -237,7 +236,7 @@ export default function Converter() {
           file: file
         };
         setExtensions(prev => [...prev, newExtension]);
-        
+
         toast({
           title: "Extension Added",
           description: `${file.name} has been added to your project.`,
@@ -250,7 +249,7 @@ export default function Converter() {
         });
       }
     });
-    
+
     // Reset input
     event.target.value = '';
   };
@@ -320,13 +319,13 @@ export default function Converter() {
                     </span>
                   </label>
                   <input
-                    id="extension-upload"
-                    type="file"
-                    className="sr-only"
-                    multiple
-                    accept=".aix"
-                    onChange={handleExtensionUpload}
-                  />
+                      type="file"
+                      multiple
+                      accept=".aix"
+                      onChange={handleExtensionUpload}
+                      className="hidden"
+                      id="extension-upload"
+                    />
                 </div>
                 <div className="mt-4">
                   <Button asChild variant="outline">
