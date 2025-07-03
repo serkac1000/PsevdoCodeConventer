@@ -1,6 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { exec } from "child_process";
+import { promisify } from "util";
+
+const execAsync = promisify(exec);
 
 const app = express();
 app.use(express.json());
@@ -36,7 +40,33 @@ app.use((req, res, next) => {
   next();
 });
 
+async function killPortProcesses(port: number) {
+  try {
+    const { stdout } = await execAsync(`lsof -ti :${port}`);
+    const pids = stdout.trim().split('\n').filter(pid => pid);
+    
+    if (pids.length > 0) {
+      log(`Found processes on port ${port}: ${pids.join(', ')}`);
+      for (const pid of pids) {
+        try {
+          await execAsync(`kill -9 ${pid}`);
+          log(`Killed process ${pid} on port ${port}`);
+        } catch (error) {
+          log(`Failed to kill process ${pid}: ${error}`);
+        }
+      }
+    }
+  } catch (error) {
+    // No processes found on port or lsof failed, which is fine
+  }
+}
+
 (async () => {
+  const port = 5000;
+  
+  // Kill any processes using port 5000 before starting
+  await killPortProcesses(port);
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -59,7 +89,6 @@ app.use((req, res, next) => {
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = 5000;
   const host = "0.0.0.0"; // Modified to bind to 0.0.0.0
   server.listen({
     port,
