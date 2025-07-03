@@ -8,21 +8,35 @@ echo.
 echo Checking for running processes...
 echo.
 
-REM Kill any Node.js processes related to this project
-for /f "tokens=1" %%a in ('wmic process where "name='node.exe'" get processid /format:value ^| find "="') do (
-    for /f "tokens=2 delims==" %%b in ("%%a") do (
-        if not "%%b"=="" (
-            echo Stopping Node.js process (PID: %%b)
-            taskkill /F /PID %%b >nul 2>&1
-        )
-    )
+REM Kill all Node.js processes
+echo Stopping all Node.js processes...
+taskkill /F /IM node.exe >nul 2>&1
+if %errorlevel% equ 0 (
+    echo Successfully stopped Node.js processes
+) else (
+    echo No Node.js processes found to stop
 )
 
 REM Kill any processes specifically on port 5000
-for /f "tokens=5" %%a in ('netstat -aon ^| find ":5000" ^| find "LISTENING"') do (
+echo Checking for processes on port 5000...
+set found_port=0
+for /f "tokens=5" %%a in ('netstat -aon ^| find ":5000" ^| find "LISTENING" 2^>nul') do (
     echo Stopping process on port 5000 (PID: %%a)
     taskkill /F /PID %%a >nul 2>&1
+    set found_port=1
 )
+
+if %found_port% equ 0 (
+    echo No processes found on port 5000
+)
+
+REM Kill any tsx processes that might be running
+echo Stopping any TypeScript processes...
+taskkill /F /IM tsx.exe >nul 2>&1
+
+REM Wait for processes to fully terminate
+echo Waiting for processes to fully terminate...
+timeout /t 2 /nobreak >nul
 
 echo.
 echo All server processes have been stopped.

@@ -58,14 +58,24 @@ if not exist "node_modules" (
 echo Checking for existing processes on port 5000...
 echo.
 
+REM Kill any existing Node.js processes
+echo Stopping all Node.js processes...
+taskkill /F /IM node.exe >nul 2>&1
+if !errorlevel! equ 0 (
+    echo Stopped existing Node.js processes
+) else (
+    echo No existing Node.js processes found
+)
+
 REM Kill any existing processes on port 5000
-for /f "tokens=5" %%a in ('netstat -aon ^| find ":5000" ^| find "LISTENING"') do (
-    echo Stopping existing process on port 5000 (PID: %%a)
+for /f "tokens=5" %%a in ('netstat -aon ^| find ":5000" ^| find "LISTENING" 2^>nul') do (
+    echo Stopping process on port 5000 (PID: %%a)
     taskkill /F /PID %%a >nul 2>&1
 )
 
 REM Wait a moment for processes to fully terminate
-timeout /t 2 /nobreak >nul
+echo Waiting for processes to stop...
+timeout /t 3 /nobreak >nul
 
 echo Starting the application...
 echo.
@@ -80,13 +90,32 @@ echo.
 REM Set environment variable for Windows
 set NODE_ENV=development
 
+REM Start the server
 npm run dev
 
 if !errorlevel! neq 0 (
     echo.
     echo ERROR: Failed to start the development server
-    echo Please check the error messages above
+    echo Trying to kill any remaining processes and restart...
     echo.
-    pause
-    exit /b 1
+    
+    REM Try to kill processes again
+    taskkill /F /IM node.exe >nul 2>&1
+    for /f "tokens=5" %%a in ('netstat -aon ^| find ":5000" ^| find "LISTENING" 2^>nul') do (
+        taskkill /F /PID %%a >nul 2>&1
+    )
+    
+    timeout /t 2 /nobreak >nul
+    
+    echo Retrying server start...
+    npm run dev
+    
+    if !errorlevel! neq 0 (
+        echo.
+        echo ERROR: Server failed to start after retry
+        echo Please check the error messages above
+        echo.
+        pause
+        exit /b 1
+    )
 )
