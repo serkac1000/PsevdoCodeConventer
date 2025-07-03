@@ -34,7 +34,15 @@ function getComponentType(componentName: string): string {
 }
 
 function convertColorValue(value: string): string {
-  return COLOR_MAPPING[value] || value;
+  const color = COLOR_MAPPING[value];
+  if (color) {
+    return color;
+  }
+  // If it's already a hex color, convert to MIT App Inventor format
+  if (value.startsWith('#')) {
+    return `&HFF${value.substring(1).toUpperCase()}`;
+  }
+  return value;
 }
 
 function generateProjectProperties(): string {
@@ -115,7 +123,11 @@ function generateBlocksFile(parsedCode: ParsedCode): string {
         if (action.property.toLowerCase().includes('color')) {
           const colorValue = convertColorValue(action.value);
           xml += `          <block type="color_make_color">\n`;
-          xml += `            <title name="COLORLIST">${colorValue}</title>\n`;
+          xml += `            <value name="COLORLIST">\n`;
+          xml += `              <block type="color_make_color">\n`;
+          xml += `                <title name="COLORLIST">${colorValue}</title>\n`;
+          xml += `              </block>\n`;
+          xml += `            </value>\n`;
           xml += `          </block>\n`;
         } else {
           xml += `          <block type="text">\n`;
