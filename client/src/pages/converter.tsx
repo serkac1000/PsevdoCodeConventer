@@ -101,8 +101,7 @@ On Button1.Click do
         Set Screen1.BackgroundColor to Red
 
 On GestureDetector1.Swipe do
-    If direction = "left" then
-        Set Label2.Text to "Swiped Left"`;
+    Set Label2.Text to "Swiped Left"`;
 
 export default function Converter() {
   const [pseudoCode, setPseudoCode] = useState(EXAMPLE_CODE);

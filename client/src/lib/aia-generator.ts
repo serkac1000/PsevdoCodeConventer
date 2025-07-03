@@ -8,6 +8,11 @@ const COMPONENT_TYPES: Record<string, string> = {
   Label: "Label",
   TextBox: "TextBox",
   Image: "Image",
+  Player: "Player",
+  GestureDetector: "GestureDetector",
+  Clock: "Clock",
+  TinyDB: "TinyDB",
+  Notifier: "Notifier",
 };
 
 // Extension definitions - add your extensions here
@@ -207,8 +212,9 @@ function generateBlocksFile(parsedCode: ParsedCode, userExtensions: Array<{name:
 
   // Generate event blocks
   for (const event of parsedCode.events) {
+    const componentType = getComponentType(event.component);
     xml += `  <block type="component_event" x="20" y="${yPosition}">\n`;
-    xml += `    <mutation component_type="${getComponentType(event.component)}" component_name="${event.component}" event_name="${event.event}"></mutation>\n`;
+    xml += `    <mutation component_type="${componentType}" instance_name="${event.component}" event_name="${event.event}" is_generic="false"></mutation>\n`;
     xml += `    <title name="COMPONENT_SELECTOR">${event.component}</title>\n`;
 
     if (event.actions.length > 0) {
@@ -235,8 +241,9 @@ function generateActionBlocks(actions: any[], depth: number): string {
       // Method call - check if it's a component method or procedure call
       if (action.component && action.method && action.component !== action.method) {
         // Component method call
+        const componentType = getComponentType(action.component);
         xml += `      <block type="component_method">\n`;
-        xml += `        <mutation component_type="${getComponentType(action.component)}" method_name="${action.method}" is_generic="false" instance_name="${action.component}"></mutation>\n`;
+        xml += `        <mutation component_type="${componentType}" method_name="${action.method}" is_generic="false" instance_name="${action.component}"></mutation>\n`;
         xml += `        <title name="COMPONENT_SELECTOR">${action.component}</title>\n`;
 
         if (action.parameters && action.parameters.length > 0) {
@@ -278,10 +285,10 @@ function generateActionBlocks(actions: any[], depth: number): string {
     } else if (action.type === 'set' && action.component && action.property) {
       // Property setting using 'set' type
       const componentType = getComponentType(action.component);
-      const isExtension = EXTENSIONS[componentType] ? "true" : "false";
+      const isGeneric = EXTENSIONS[componentType] ? "true" : "false";
 
       xml += `      <block type="component_set_get">\n`;
-      xml += `        <mutation component_type="${componentType}" set_or_get="set" property_name="${action.property}" is_generic="${isExtension}" instance_name="${action.component}"></mutation>\n`;
+      xml += `        <mutation component_type="${componentType}" set_or_get="set" property_name="${action.property}" is_generic="${isGeneric}" instance_name="${action.component}"></mutation>\n`;
       xml += `        <title name="COMPONENT_SELECTOR">${action.component}</title>\n`;
       xml += `        <value name="VALUE">\n`;
       xml += generateValueBlock(action.value);
@@ -348,10 +355,10 @@ function generateActionBlocks(actions: any[], depth: number): string {
     } else if (action.component && action.property && action.value !== undefined) {
       // Property setting - only process if component, property and value exist
       const componentType = getComponentType(action.component);
-      const isExtension = EXTENSIONS[componentType] ? "true" : "false";
+      const isGeneric = EXTENSIONS[componentType] ? "true" : "false";
 
       xml += `      <block type="component_set_get">\n`;
-      xml += `        <mutation component_type="${componentType}" set_or_get="set" property_name="${action.property}" is_generic="${isExtension}" instance_name="${action.component}"></mutation>\n`;
+      xml += `        <mutation component_type="${componentType}" set_or_get="set" property_name="${action.property}" is_generic="${isGeneric}" instance_name="${action.component}"></mutation>\n`;
       xml += `        <title name="COMPONENT_SELECTOR">${action.component}</title>\n`;
       xml += `        <value name="VALUE">\n`;
       xml += generateValueBlock(action.value);
