@@ -36,6 +36,11 @@ const COLOR_MAPPING: Record<string, string> = {
 };
 
 function getComponentType(componentName: string): string {
+  // Handle undefined or null componentName
+  if (!componentName || typeof componentName !== 'string') {
+    return "Button"; // Default fallback
+  }
+
   // Check for extensions first
   for (const [extName, extInfo] of Object.entries(EXTENSIONS)) {
     if (componentName.startsWith(extName)) {
@@ -244,6 +249,18 @@ function generateActionBlocks(actions: any[], depth: number): string {
       // Variable assignment
       xml += `      <block type="lexical_variable_set">\n`;
       xml += `        <title name="VAR">${action.variable}</title>\n`;
+      xml += `        <value name="VALUE">\n`;
+      xml += generateValueBlock(action.value);
+      xml += `        </value>\n`;
+
+    } else if (action.type === 'set' && action.component && action.property) {
+      // Property setting using 'set' type
+      const componentType = getComponentType(action.component);
+      const isExtension = EXTENSIONS[componentType] ? "true" : "false";
+
+      xml += `      <block type="component_set_get">\n`;
+      xml += `        <mutation component_type="${componentType}" set_or_get="set" property_name="${action.property}" is_generic="${isExtension}" instance_name="${action.component}"></mutation>\n`;
+      xml += `        <title name="COMPONENT_SELECTOR">${action.component}</title>\n`;
       xml += `        <value name="VALUE">\n`;
       xml += generateValueBlock(action.value);
       xml += `        </value>\n`;
