@@ -232,16 +232,38 @@ function generateActionBlocks(actions: any[], depth: number): string {
     const action = actions[i];
 
     if (action.type === 'call') {
-      // Method call
-      xml += `      <block type="component_method">\n`;
-      xml += `        <mutation component_type="${getComponentType(action.component)}" method_name="${action.method}" is_generic="false" instance_name="${action.component}"></mutation>\n`;
-      xml += `        <title name="COMPONENT_SELECTOR">${action.component}</title>\n`;
+      // Method call - check if it's a component method or procedure call
+      if (action.component && action.method && action.component !== action.method) {
+        // Component method call
+        xml += `      <block type="component_method">\n`;
+        xml += `        <mutation component_type="${getComponentType(action.component)}" method_name="${action.method}" is_generic="false" instance_name="${action.component}"></mutation>\n`;
+        xml += `        <title name="COMPONENT_SELECTOR">${action.component}</title>\n`;
 
-      if (action.parameters && action.parameters.length > 0) {
-        for (let p = 0; p < action.parameters.length; p++) {
-          xml += `        <value name="ARG${p}">\n`;
-          xml += generateValueBlock(action.parameters[p]);
-          xml += `        </value>\n`;
+        if (action.parameters && action.parameters.length > 0) {
+          for (let p = 0; p < action.parameters.length; p++) {
+            xml += `        <value name="ARG${p}">\n`;
+            xml += generateValueBlock(action.parameters[p]);
+            xml += `        </value>\n`;
+          }
+        }
+      } else {
+        // Procedure call
+        xml += `      <block type="procedures_callnoreturn">\n`;
+        xml += `        <mutation name="${action.method || action.component}">\n`;
+        if (action.parameters && action.parameters.length > 0) {
+          for (const param of action.parameters) {
+            xml += `          <arg name="${param}"></arg>\n`;
+          }
+        }
+        xml += `        </mutation>\n`;
+        xml += `        <title name="PROCNAME">${action.method || action.component}</title>\n`;
+        
+        if (action.parameters && action.parameters.length > 0) {
+          for (let p = 0; p < action.parameters.length; p++) {
+            xml += `        <value name="ARG${p}">\n`;
+            xml += generateValueBlock(action.parameters[p]);
+            xml += `        </value>\n`;
+          }
         }
       }
 
@@ -323,8 +345,8 @@ function generateActionBlocks(actions: any[], depth: number): string {
       }
       xml += `        </statement>\n`;
 
-    } else if (action.component && action.property) {
-      // Property setting - only process if component and property exist
+    } else if (action.component && action.property && action.value !== undefined) {
+      // Property setting - only process if component, property and value exist
       const componentType = getComponentType(action.component);
       const isExtension = EXTENSIONS[componentType] ? "true" : "false";
 
@@ -335,7 +357,8 @@ function generateActionBlocks(actions: any[], depth: number): string {
       xml += generateValueBlock(action.value);
       xml += `        </value>\n`;
     } else {
-      // Skip unknown action types
+      // Skip unknown or incomplete action types
+      console.warn('Skipping incomplete action:', action);
       continue;
     }
 
