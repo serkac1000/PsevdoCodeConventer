@@ -122,7 +122,7 @@ function generateBlocksFile(parsedCode: ParsedCode): string {
         
         if (action.property.toLowerCase().includes('color')) {
           const colorValue = convertColorValue(action.value);
-          xml += `          <block type="color_make_color">\n`;
+          xml += `          <block type="color_red">\n`;
           xml += `            <title name="COLORLIST">${colorValue}</title>\n`;
           xml += `          </block>\n`;
         } else {
