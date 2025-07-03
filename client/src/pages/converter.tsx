@@ -128,6 +128,19 @@ export default function Converter() {
     handleParsePseudoCode(pseudoCode);
   }, [pseudoCode, handleParsePseudoCode]);
 
+  useEffect(() => {
+    // Test JSZip functionality on mount
+    import('../lib/test-jszip').then(({ testJSZip }) => {
+      testJSZip().then(success => {
+        if (!success) {
+          console.error("JSZip test failed - AIA generation may not work properly");
+        } else {
+          console.log("JSZip test passed - AIA generation should work");
+        }
+      });
+    });
+  }, []);
+
   const handleClearInput = () => {
     setPseudoCode("");
     editorRef.current?.setValue("");
@@ -150,9 +163,29 @@ export default function Converter() {
       return;
     }
 
+    console.log("Starting AIA download process...");
+    console.log("Parsed code:", parsedCode);
+    console.log("Extensions:", extensions);
+
     setIsGenerating(true);
     try {
+      // Validate parsed code structure
+      if (!parsedCode.events || !Array.isArray(parsedCode.events)) {
+        throw new Error("Invalid parsed code structure: missing or invalid events array");
+      }
+
+      if (!parsedCode.components || !Array.isArray(parsedCode.components)) {
+        throw new Error("Invalid parsed code structure: missing or invalid components array");
+      }
+
+      console.log("Calling generateAIA...");
       const aiaBlob = await generateAIA(parsedCode, extensions);
+      
+      if (!aiaBlob || aiaBlob.size === 0) {
+        throw new Error("Generated AIA file is empty or invalid");
+      }
+
+      console.log("AIA blob generated successfully, size:", aiaBlob.size);
 
       // Create download link
       const url = URL.createObjectURL(aiaBlob);
@@ -164,15 +197,24 @@ export default function Converter() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
+      console.log("Download initiated successfully");
+
       toast({
         title: "AIA File Generated",
         description: "Your AIA file has been downloaded successfully.",
       });
     } catch (error) {
       console.error("Generation error:", error);
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
+        parsedCode: parsedCode,
+        extensions: extensions
+      });
+      
       toast({
         title: "Generation Failed",
-        description: "Failed to generate AIA file. Please try again.",
+        description: `Failed to generate AIA file: ${error.message}`,
         variant: "destructive",
       });
     } finally {

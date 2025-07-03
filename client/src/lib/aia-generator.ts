@@ -308,33 +308,71 @@ function generateValueBlock(value: string): string {
 }
 
 export async function generateAIA(parsedCode: ParsedCode, userExtensions: Array<{name: string, version: string, uuid: string, file?: File}> = []): Promise<Blob> {
-  const zip = new JSZip();
-
-  // Create the correct AIA structure
-  zip.file("youngandroidproject/project.properties", generateProjectProperties());
-
-  // Generate form file (.scm)
-  const formContent = generateFormFile(parsedCode, userExtensions);
-  zip.file("src/appinventor/ai_anonymous/ConvertedApp/Screen1.scm", formContent);
-
-  // Generate blocks file (.bky) 
-  const blocksContent = generateBlocksFile(parsedCode, userExtensions);
-  zip.file("src/appinventor/ai_anonymous/ConvertedApp/Screen1.bky", blocksContent);
-
-  // Add required meta files
-  zip.file("assets/README.txt", "This is the assets folder for your project.\n\nAny files you add here will be packaged with your application.\n\nIf you have media files that you want to use in your app, copy them to this folder.");
-
-  // Add build directory structure
-  zip.file("build/README.txt", "This is the build folder for your project.\n\nFiles in this folder are generated automatically by App Inventor.\n\nDo not edit the files in this folder.");
-
-  // Add extension files if provided
-  for (const extension of userExtensions) {
-    if (extension.file) {
-      const extensionData = await extension.file.arrayBuffer();
-      zip.file(`assets/${extension.file.name}`, extensionData);
+  try {
+    console.log("Starting AIA generation...", { parsedCode, userExtensions });
+    
+    if (!parsedCode) {
+      throw new Error("Parsed code is null or undefined");
     }
-  }
 
-  // Generate the ZIP file
-  return await zip.generateAsync({ type: "blob" });
+    if (!parsedCode.events || !Array.isArray(parsedCode.events)) {
+      throw new Error("Invalid parsed code: events array is missing or invalid");
+    }
+
+    const zip = new JSZip();
+
+    // Create the correct AIA structure
+    const projectProperties = generateProjectProperties();
+    console.log("Generated project properties:", projectProperties);
+    zip.file("youngandroidproject/project.properties", projectProperties);
+
+    // Generate form file (.scm)
+    const formContent = generateFormFile(parsedCode, userExtensions);
+    console.log("Generated form content:", formContent.substring(0, 200) + "...");
+    zip.file("src/appinventor/ai_anonymous/ConvertedApp/Screen1.scm", formContent);
+
+    // Generate blocks file (.bky) 
+    const blocksContent = generateBlocksFile(parsedCode, userExtensions);
+    console.log("Generated blocks content:", blocksContent.substring(0, 200) + "...");
+    zip.file("src/appinventor/ai_anonymous/ConvertedApp/Screen1.bky", blocksContent);
+
+    // Add required meta files
+    zip.file("assets/README.txt", "This is the assets folder for your project.\n\nAny files you add here will be packaged with your application.\n\nIf you have media files that you want to use in your app, copy them to this folder.");
+
+    // Add build directory structure
+    zip.file("build/README.txt", "This is the build folder for your project.\n\nFiles in this folder are generated automatically by App Inventor.\n\nDo not edit the files in this folder.");
+
+    // Add extension files if provided
+    for (const extension of userExtensions) {
+      if (extension.file) {
+        try {
+          console.log("Adding extension file:", extension.file.name);
+          const extensionData = await extension.file.arrayBuffer();
+          zip.file(`assets/${extension.file.name}`, extensionData);
+        } catch (extError) {
+          console.error("Error adding extension file:", extension.file.name, extError);
+          throw new Error(`Failed to add extension file ${extension.file.name}: ${extError.message}`);
+        }
+      }
+    }
+
+    console.log("Generating ZIP file...");
+    // Generate the ZIP file
+    const blob = await zip.generateAsync({ 
+      type: "blob",
+      compression: "DEFLATE",
+      compressionOptions: {
+        level: 6
+      }
+    });
+    
+    console.log("AIA generation completed successfully, blob size:", blob.size);
+    return blob;
+    
+  } catch (error) {
+    console.error("AIA generation failed:", error);
+    console.error("Error stack:", error.stack);
+    console.error("Parsed code state:", parsedCode);
+    throw new Error(`AIA generation failed: ${error.message}`);
+  }
 }

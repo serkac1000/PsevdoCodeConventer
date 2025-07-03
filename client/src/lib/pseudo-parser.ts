@@ -342,11 +342,15 @@ export function parsePseudoCode(code: string): ParsedCode {
     procedures.push(currentProcedure);
   }
 
-  return {
-    events,
-    variables,
-    procedures,
-    components: Array.from(components),
-    errors
+  // Ensure all required arrays are present and valid
+  const result = {
+    events: events || [],
+    variables: variables || [],
+    procedures: procedures || [],
+    components: Array.from(components) || [],
+    errors: errors || []
   };
+
+  console.log("Parser result:", result);
+  return result;
 }
