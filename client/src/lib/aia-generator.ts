@@ -250,9 +250,64 @@ function generateActionBlocks(actions: any[], depth: number): string {
 
     } else if (action.type === 'define') {
       // Variable definition (handled at top level)
+      continue;
 
-    } else {
-      // Property setting
+    } else if (action.type === 'if') {
+      // If statement
+      xml += `      <block type="controls_if">\n`;
+      xml += `        <value name="IF0">\n`;
+      xml += `          <block type="logic_compare">\n`;
+      xml += `            <title name="OP">GT</title>\n`;
+      xml += `            <value name="A">\n`;
+      xml += `              <block type="text">\n`;
+      xml += `                <title name="TEXT">${action.condition}</title>\n`;
+      xml += `              </block>\n`;
+      xml += `            </value>\n`;
+      xml += `          </block>\n`;
+      xml += `        </value>\n`;
+      xml += `        <statement name="DO0">\n`;
+      if (action.actions && action.actions.length > 0) {
+        xml += generateActionBlocks(action.actions, depth + 1);
+      }
+      xml += `        </statement>\n`;
+      if (action.elseActions && action.elseActions.length > 0) {
+        xml += `        <statement name="ELSE">\n`;
+        xml += generateActionBlocks(action.elseActions, depth + 1);
+        xml += `        </statement>\n`;
+      }
+
+    } else if (action.type === 'foreach') {
+      // For each loop
+      xml += `      <block type="controls_forEach">\n`;
+      xml += `        <title name="VAR">${action.variable}</title>\n`;
+      xml += `        <value name="LIST">\n`;
+      xml += `          <block type="lexical_variable_get">\n`;
+      xml += `            <title name="VAR">${action.value}</title>\n`;
+      xml += `          </block>\n`;
+      xml += `        </value>\n`;
+      xml += `        <statement name="DO">\n`;
+      if (action.actions && action.actions.length > 0) {
+        xml += generateActionBlocks(action.actions, depth + 1);
+      }
+      xml += `        </statement>\n`;
+
+    } else if (action.type === 'while') {
+      // While loop
+      xml += `      <block type="controls_whileUntil">\n`;
+      xml += `        <title name="MODE">WHILE</title>\n`;
+      xml += `        <value name="BOOL">\n`;
+      xml += `          <block type="text">\n`;
+      xml += `            <title name="TEXT">${action.condition}</title>\n`;
+      xml += `          </block>\n`;
+      xml += `        </value>\n`;
+      xml += `        <statement name="DO">\n`;
+      if (action.actions && action.actions.length > 0) {
+        xml += generateActionBlocks(action.actions, depth + 1);
+      }
+      xml += `        </statement>\n`;
+
+    } else if (action.component && action.property) {
+      // Property setting - only process if component and property exist
       const componentType = getComponentType(action.component);
       const isExtension = EXTENSIONS[componentType] ? "true" : "false";
 
@@ -262,6 +317,9 @@ function generateActionBlocks(actions: any[], depth: number): string {
       xml += `        <value name="VALUE">\n`;
       xml += generateValueBlock(action.value);
       xml += `        </value>\n`;
+    } else {
+      // Skip unknown action types
+      continue;
     }
 
     if (i < actions.length - 1) {
