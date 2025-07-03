@@ -10,6 +10,17 @@ const COMPONENT_TYPES: Record<string, string> = {
   Image: "Image",
 };
 
+// Extension definitions - add your extensions here
+const EXTENSIONS: Record<string, any> = {
+  // Example: Clock extension
+  Clock: {
+    name: "Clock",
+    version: "1",
+    uuid: "com.google.appinventor.components.runtime.Clock"
+  },
+  // Add more extensions as needed
+};
+
 // Color mapping for MIT App Inventor (corrected format)
 const COLOR_MAPPING: Record<string, string> = {
   Red: "&HFFFF0000",
@@ -25,6 +36,14 @@ const COLOR_MAPPING: Record<string, string> = {
 };
 
 function getComponentType(componentName: string): string {
+  // Check for extensions first
+  for (const [extName, extInfo] of Object.entries(EXTENSIONS)) {
+    if (componentName.startsWith(extName)) {
+      return extName;
+    }
+  }
+  
+  // Then check built-in components
   for (const [prefix, type] of Object.entries(COMPONENT_TYPES)) {
     if (componentName.startsWith(prefix)) {
       return type;
@@ -58,12 +77,18 @@ useslocation=False`;
 
 function generateFormFile(parsedCode: ParsedCode): string {
   const components: any[] = [];
+  const usedExtensions = new Set<string>();
 
   // Create component definitions (excluding Screen components)
   for (const componentName of parsedCode.components) {
     if (componentName.startsWith('Screen')) continue; // Skip screen components
     
     const componentType = getComponentType(componentName);
+    
+    // Track which extensions are used
+    if (EXTENSIONS[componentType]) {
+      usedExtensions.add(componentType);
+    }
     
     const component: any = {
       "$Name": componentName,
@@ -96,6 +121,15 @@ function generateFormFile(parsedCode: ParsedCode): string {
     }
   };
 
+  // Add extensions if any are used
+  if (usedExtensions.size > 0) {
+    form.Properties["$Extensions"] = Array.from(usedExtensions).map(extName => ({
+      "$Name": extName,
+      "$Version": EXTENSIONS[extName].version,
+      "$UUID": EXTENSIONS[extName].uuid
+    }));
+  }
+
   return `#|\n$JSON\n${JSON.stringify(form)}\n|#`;
 }
 
@@ -115,8 +149,11 @@ function generateBlocksFile(parsedCode: ParsedCode): string {
       for (let i = 0; i < event.actions.length; i++) {
         const action = event.actions[i];
         
+        const componentType = getComponentType(action.component);
+        const isExtension = EXTENSIONS[componentType] ? "true" : "false";
+        
         xml += `      <block type="component_set_get">\n`;
-        xml += `        <mutation component_type="${getComponentType(action.component)}" set_or_get="set" property_name="${action.property}" is_generic="false" instance_name="${action.component}"></mutation>\n`;
+        xml += `        <mutation component_type="${componentType}" set_or_get="set" property_name="${action.property}" is_generic="${isExtension}" instance_name="${action.component}"></mutation>\n`;
         xml += `        <title name="COMPONENT_SELECTOR">${action.component}</title>\n`;
         xml += `        <value name="VALUE">\n`;
         
