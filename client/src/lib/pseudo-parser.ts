@@ -84,12 +84,21 @@ export function parsePseudoCode(code: string): ParsedCode {
     const lineNumber = i + 1;
 
     // Skip empty lines and comments
-    if (!line || line.startsWith('//')) {
+    if (!line || line.startsWith('//') || line.match(/^\s*\([^)]*\)\s*$/)) {
       continue;
     }
 
+    // Remove inline parenthetical comments
+    const cleanLine = line.replace(/\s*\([^)]*\)\s*$/, '').trim();
+    if (!cleanLine) {
+      continue;
+    }
+
+    // Use cleaned line for parsing
+    const processLine = cleanLine;
+
     // Variable definition: "Define Variable as Value"
-    const defineVarMatch = line.match(/^Define\s+(\w+)\s+as\s+(.+)$/i);
+    const defineVarMatch = processLine.match(/^Define\s+(\w+)\s+as\s+(.+)$/i);
     if (defineVarMatch) {
       const [, varName, value] = defineVarMatch;
       variables.push({
@@ -100,7 +109,7 @@ export function parsePseudoCode(code: string): ParsedCode {
     }
 
     // Procedure definition: "Define ProcedureName(parameters)"
-    const defineProcMatch = line.match(/^Define\s+(\w+)(?:\(([^)]*)\))?$/i);
+    const defineProcMatch = processLine.match(/^Define\s+(\w+)(?:\(([^)]*)\))?$/i);
     if (defineProcMatch && !defineVarMatch) {
       const [, procName, params] = defineProcMatch;
 
@@ -123,7 +132,7 @@ export function parsePseudoCode(code: string): ParsedCode {
     }
 
     // Event handler: "When ComponentName.EventName" or "On ComponentName.EventName do"
-    const eventMatch = line.match(/^(?:When|On)\s+(\w+)\.(\w+)(?:\s+do)?$/i);
+    const eventMatch = processLine.match(/^(?:When|On)\s+(\w+)\.(\w+)(?:\s+do)?$/i);
     if (eventMatch) {
       const [, component, event] = eventMatch;
 
@@ -147,7 +156,7 @@ export function parsePseudoCode(code: string): ParsedCode {
     }
 
     // Variable assignment: "Set Variable to Value"
-    const assignMatch = line.match(/^Set\s+(\w+)\s+to\s+(.+)$/i);
+    const assignMatch = processLine.match(/^Set\s+(\w+)\s+to\s+(.+)$/i);
     if (assignMatch && !assignMatch[1].includes('.')) {
       const [, variable, value] = assignMatch;
 
@@ -174,7 +183,7 @@ export function parsePseudoCode(code: string): ParsedCode {
     }
 
     // Property setting: "Set ComponentName.Property to Value"
-    const setMatch = line.match(/^Set\s+(\w+)\.(\w+)\s+to\s+(.+)$/i);
+    const setMatch = processLine.match(/^Set\s+(\w+)\.(\w+)\s+to\s+(.+)$/i);
     if (setMatch) {
       const [, component, property, value] = setMatch;
 
@@ -204,7 +213,7 @@ export function parsePseudoCode(code: string): ParsedCode {
     }
 
     // Method call: "Call ComponentName.Method" or "Call ProcedureName(params)"
-    const callMatch = line.match(/^Call\s+(\w+)(?:\.(\w+))?(?:\s*\(([^)]*)\)|\s+(.+))?$/i);
+    const callMatch = processLine.match(/^Call\s+(\w+)(?:\.(\w+))?(?:\s*\(([^)]*)\)|\s+(.+))?$/i);
     if (callMatch) {
       const [, componentOrProc, method, parenParams, spaceParams] = callMatch;
 
@@ -243,7 +252,7 @@ export function parsePseudoCode(code: string): ParsedCode {
     }
 
     // Conditional: "If Condition then"
-    const ifMatch = line.match(/^If\s+(.+)\s+then$/i);
+    const ifMatch = processLine.match(/^If\s+(.+)\s+then$/i);
     if (ifMatch) {
       const [, condition] = ifMatch;
 
@@ -271,7 +280,7 @@ export function parsePseudoCode(code: string): ParsedCode {
     }
 
     // While loop: "While Condition do"
-    const whileMatch = line.match(/^While\s+(.+)\s+do$/i);
+    const whileMatch = processLine.match(/^While\s+(.+)\s+do$/i);
     if (whileMatch) {
       const [, condition] = whileMatch;
 
@@ -298,7 +307,7 @@ export function parsePseudoCode(code: string): ParsedCode {
     }
 
     // For each loop: "For each Item in List do"
-    const forEachMatch = line.match(/^For\s+each\s+(\w+)\s+in\s+(\w+)\s+do$/i);
+    const forEachMatch = processLine.match(/^For\s+each\s+(\w+)\s+in\s+(\w+)\s+do$/i);
     if (forEachMatch) {
       const [, item, list] = forEachMatch;
 
@@ -326,7 +335,7 @@ export function parsePseudoCode(code: string): ParsedCode {
     }
 
     // If we reach here, it's an unrecognized line
-    if (line && !line.match(/^(?:Else|End)/i)) {
+    if (processLine && !processLine.match(/^(?:Else|End)/i)) {
       errors.push({
         line: lineNumber,
         message: `Unrecognized syntax: ${line}`
